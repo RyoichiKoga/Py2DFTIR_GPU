@@ -1,4 +1,4 @@
-#%%  第一段：读取 reference 和 sample 数据，输出干涉图并压缩为 3D cube
+
 
 import os
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -16,10 +16,11 @@ import os
 
 warnings.filterwarnings('ignore')
 # -------------------------------
-# 参数设置
+# Parameter settings
 # -------------------------------
-frames = 2000  # 要读取的总帧数
-# 请根据实际情况把下面两行改成你本地的文件夹路径（注意最后带斜杠）
+frames = 2000  # Total number of frames to read
+# Modify the following two lines according to your local folder paths
+# (make sure to include a trailing slash at the end of each path).
 Path_sam = '/media/user/Data/2DFT-IRdata/JASCO-sam/'
 Path_ref = '/media/user/Data/2DFT-IRdata/JASCO-ref/'
 # -------------------------------
@@ -35,26 +36,25 @@ def load_cube_by_loop(path, frames=2000):
 
     return cube
 # -------------------------------
-# 1. 读取 Sample 与 Reference，生成 3D-cube
+# 1. Read the Sample and Reference data and generate 3D cubes
 # -------------------------------
-Z_sam = load_cube_by_loop(Path_sam, frames)  # 样品干涉信号立方
-Z_ref = load_cube_by_loop(Path_ref, frames)  # 参考干涉信号立方
+Z_sam = load_cube_by_loop(Path_sam, frames)  
+Z_ref = load_cube_by_loop(Path_ref, frames)  
 print(f"Loaded Z_sam shape:   {Z_sam.shape}")
 print(f"Loaded Z_ref shape:   {Z_ref.shape}")
 # -------------------------------
-# 2. 在同一像素 (319,239) 处绘制 Sample vs Reference 干涉条纹对比
-#    行、列下标从 0 开始，即 (319, 239) 表示第 320 列、第 240 行
+# 2. Plot and compare the Sample and Reference interferograms at the same pixel (319, 239)
+#    Row and column indices start from 0; i.e., (319, 239) corresponds to column 320 and row 240
 # -------------------------------
 pixel_y, pixel_x = 319, 239
 x_axis = np.arange(frames)
-# --- 样品干涉条纹处理 ---
+
 ysam = Z_sam[:, pixel_y, pixel_x]
-H_sam = np.poly1d(np.polyfit(x_axis, ysam, 1))(x_axis)  # 去线性趋势
+H_sam = np.poly1d(np.polyfit(x_axis, ysam, 1))(x_axis)  
 ysam_detrended = ysam - H_sam
 xmax_sam = np.argmax(np.abs(ysam_detrended))
 ysam_centered = np.roll(ysam_detrended, frames//2 - xmax_sam)
 
-# --- 参考干涉条纹处理 ---
 yref = Z_ref[:, pixel_y, pixel_x]
 H_ref = np.poly1d(np.polyfit(x_axis, yref, 1))(x_axis)
 yref_detrended = yref - H_ref
@@ -62,7 +62,7 @@ xmax_ref = np.argmax(np.abs(yref_detrended))
 yref_centered = np.roll(yref_detrended, frames//2 - xmax_ref)
 
 # -------------------------------
-# 3. 绘图：绘制两个干涉条纹
+# 3. Plot the two interferograms
 # -------------------------------
 plt.figure(figsize=(12, 5))
 plt.plot(x_axis, ysam_centered, color='blue',  label='Sample Interferogram')
@@ -83,19 +83,18 @@ from scipy.fft import rfft
 from numba import njit, prange
 import cupy as cp
 
-# ————— 全局参数 —————
 frames = 2000
 N1, N2 = frames, 8192
-pix_size = 17e3      # 像素尺寸 (nm)
-f = 61e6             # 焦距 (nm)
-M_L = 1.99905        # 可动镜行程 (mm)
+pix_size = 17e3      # Pixel size (nm)
+f = 61e6             # Focal distance (nm)
+M_L = 1.99905        # Mirror moving range  (mm)
 M = M_L * 1e6 / N1   # nm per frame
 
 phi_y = 57.642 * np.pi / 180.0
-cx, cy = 319, 239    # 中心像素坐标
+cx, cy = 319, 239    # Center pixel
 
-window = np.hanning(N1)           # 或 np.hanning(N1)
-wnum = np.arange(495, 2500, 4, dtype=np.float32)  # 波数轴 (cm⁻¹)
+window = np.hanning(N1)           # or np.hanning(N1)
+wnum = np.arange(495, 2500, 4, dtype=np.float32)  # Wavenumber (cm⁻¹)
 nw = len(wnum)
 
 _t_start = time.perf_counter()
@@ -104,7 +103,7 @@ N1 = frames
 x = np.arange(N1, dtype=np.float32)
 x_mean = np.float32((N1 - 1) * 0.5)
 x0 = x - x_mean
-denom = np.float32(np.sum(x0 * x0))   # これは N1 固定なら定数
+denom = np.float32(np.sum(x0 * x0))   
 
 
 @njit(parallel=True)
@@ -135,7 +134,7 @@ def detrend_linear_all_numba(Y, x0, x_mean, denom):
             a = cov / denom
             b = y_mean - a * x_mean
 
-            # out = Y - (a*x + b) だが x = x0 + x_mean を使うと速い
+            # out = Y - (a*x + b) but x = x0 + x_mean is faster
             # trend = a*(x0 + x_mean) + b = a*x0 + (a*x_mean + b)
             c = a * x_mean + b
             for i in range(N1):
@@ -147,9 +146,9 @@ def detrend_linear_all_numba(Y, x0, x_mean, denom):
 @njit(parallel=True, fastmath=True)
 def roll_center_numba(Y):
     """
-    Y: (N1, ny, nx) float32
-    各ピクセルで |Y| 最大の位置を N1//2 に来るように循環シフトして out に格納
-    take_along_axisもnp.rollも使わない（巨大インデックスなし）
+Y: (N1, ny, nx) float32
+For each pixel, circularly shift the data so that the position with the maximum |Y| is centered at N1//2, and store the result in out.
+Neither take_along_axis nor np.roll is used (to avoid creating large index arrays).
     """
     N1, ny, nx = Y.shape
     out = np.empty_like(Y)
@@ -167,7 +166,7 @@ def roll_center_numba(Y):
                     vmax = av
                     imax = i
 
-            sh = mid - imax  # これだけ中央へ寄せたい
+            sh = mid - imax  
             # out[i] = Y[(i - sh) mod N1]
             # modは負に注意して手動で
             for i in range(N1):
@@ -181,22 +180,22 @@ def preprocess_fft_mag(Z, window, N2):
     """
     Z: (N1, ny, nx)
     window: (N1,)
-    N2: ゼロパディング長
-    return: mag (nf, ny, nx), nf = N2//2 - 1 （DCとNyquist除く、元コードに合わせる）
+    N2: Zero padding length
+    return: mag (nf, ny, nx), nf = N2//2 - 1 
     """
     Z = Z.astype(np.float32, copy=False)
 
-    # 1) detrend（polyfit相当）
+    # 1) detrend（polyfit）
     #Y = detrend_linear_all(Z)
     Y = detrend_linear_all_numba(Z, x0, x_mean, denom)
 
-    # 2) センターバースト補正（argmax + roll）
+    # 2) Centerburst correction（argmax + roll）
     Y = roll_center_numba(Y)
 
     # 3) window
     Y *= window[:, None, None]
 
-    # 4) FFT（実数入力なので rfft でOK）
+    # 4) FFT（rfft is OK）
     #F = np.fft.rfft(Y, n=N2, axis=0)             # (N2//2+1, ny, nx)
     #F = rfft(Y, n=N2, axis=0, workers=-1)    #workers > paralell calc.
     
@@ -205,9 +204,8 @@ def preprocess_fft_mag(Z, window, N2):
     Fg = cp.fft.rfft(Yg, n=N2, axis=0)     # cuFFT
     magg = cp.abs(Fg)[1:N2//2]             # (N2//2-1, ny, nx)
 
-    # 元コード：abs(fft(...))[1:N2//2]
     #mag = np.abs(F)[1:N2//2]                     # (N2//2-1, ny, nx)
-    mag = cp.asnumpy(magg)  # GPU->CPU（後段numbaのため）
+    mag = cp.asnumpy(magg)  # GPU->CPU（because latter is numba）
     return mag
 
 ny, nx = Z_sam.shape[1], Z_sam.shape[2]
@@ -216,11 +214,9 @@ window = np.hanning(N1)
 fft_s_mag = preprocess_fft_mag(Z_sam, window, N2)   # (nf, ny, nx)
 fft_r_mag = preprocess_fft_mag(Z_ref, window, N2)   # (nf, ny, nx)
 
-######ここからループ#####
+######Loop#####
 #def compute_T_map(ny, nx, cx, cy, pix_size, f, phi_y, M):
-    #"""
-    #各ピクセルのサンプリング間隔T（秒）を作る (ny, nx)
-    #"""
+
     #py = np.arange(ny)[:, None]
     #px = np.arange(nx)[None, :]
 
@@ -236,14 +232,13 @@ fft_r_mag = preprocess_fft_mag(Z_ref, window, N2)   # (nf, ny, nx)
     #return T
 
 
-# 前計算
 #T_map = compute_T_map(ny, nx, cx, cy, pix_size, f, phi_y, M)
 
 dat = np.load("T_map_lookup.npz", allow_pickle=True)
 T_map = dat["T_map"]
 meta = dat["meta"].item()
 
-# 安全確認（超重要）
+# Assert safety
 assert meta["ny"] == ny and meta["nx"] == nx
 assert meta["cx"] == cx and meta["cy"] == cy
 assert meta["pix_size"] == pix_size
@@ -256,7 +251,7 @@ assert meta["M"] == M
 def interp1d_numba(x, xp, fp, fill):
     """
     x : wnum (nw,)
-    xp: freq_pos (nf,) 単調増加
+    xp: freq_pos (nf,)
     fp: fft_s_1d (nf,)
     """
     nw = x.shape[0]
@@ -325,13 +320,13 @@ spec_s, spec_r = interp_all_pixels(
 _t_end = time.perf_counter()
 print(f"\n[TOTAL TIME] {( _t_end - _t_start ):.3f} s") 
 
-# ————— 2) 计算平均样本谱和平均参考谱 —————
+# Calculate the average sample spectrum and the average reference spectrum
 mean_s = spec_s.mean(axis=(0, 1))  # (nw,)
 mean_r = spec_r.mean(axis=(0, 1))  # (nw,)
 A = ((mean_s + 1e-12) / (mean_r + 1e-12)) * 100  # (nw,)
 
 
-# ————— 4) 绘图：吸光度 光谱 —————
+# Plot the absorbance spectrum
 plt.figure(figsize=(8,5))
 plt.plot(wnum, A, color='purple', lw=1.5)
 plt.xlim(495, 2500)
