@@ -10,23 +10,23 @@ import numpy as np
 
 frames = 2000
 N1, N2 = frames, 8192
-pix_size = 17e3      # 像素尺寸 (nm)
-f = 61e6             # 焦距 (nm)
-M_L = 1.99905        # 可动镜行程 (mm)
+pix_size = 17e3      # Pixel size (nm)
+f = 61e6             # Focal length (nm)
+M_L = 1.99905        # Mirror moving length (mm)
 M = M_L * 1e6 / N1   # nm per frame
 
 phi_y = 57.642 * np.pi / 180.0
-cx, cy = 319, 239    # 中心像素坐标
+cx, cy = 319, 239    # Center pixel
 
-window = np.hanning(N1)           # 或 np.hanning(N1)
-wnum = np.arange(495, 2500, 4, dtype=np.float32)  # 波数轴 (cm⁻¹)
+window = np.hanning(N1)           # or np.hanning(N1)
+wnum = np.arange(495, 2500, 4, dtype=np.float32)  # Wavenumber (cm⁻¹)
 nw = len(wnum)
 
 nx, ny = 640,480
 
 def compute_T_map(ny, nx, cx, cy, pix_size, f, phi_y, M):
     """
-    各ピクセルのサンプリング間隔T（秒）を作る (ny, nx)
+    Sampling interval T（sec）in each pixel (ny, nx)
     """
     py = np.arange(ny)[:, None]
     px = np.arange(nx)[None, :]
@@ -42,7 +42,6 @@ def compute_T_map(ny, nx, cx, cy, pix_size, f, phi_y, M):
     T = L * 1e-7                                   # seconds
     return T
 
-# 前計算
 T_map = compute_T_map(ny, nx, cx, cy, pix_size, f, phi_y, M)
 
 meta = dict(
@@ -56,7 +55,7 @@ np.savez("T_map_lookup.npz", T_map=T_map, meta=meta)
 import numpy as np
 import matplotlib.pyplot as plt
 
-# 読み込み
+# Read
 dat = np.load("T_map_lookup.npz", allow_pickle=True)
 T_map = dat["T_map"]
 
