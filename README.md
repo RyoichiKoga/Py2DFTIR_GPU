@@ -5,4 +5,4 @@ A 2D FT-IR capable of wider bandwidth imaging was developed, based on the design
 This code requires a Python environment with the necessary scientific computing libraries installed. GPU acceleration is supported and requires an appropriate GPU computing environment, including compatible GPU drivers and CUDA-related libraries.
 
 First, the users run the code of 2D WFT-IR_Create_Tmap.py, and the file "T_map_lookup.npz" should be created.
-Then, they specify the sample and reference data names with directory in the code of 2D WFT-IR_gpu_ver3.py, and run it.
+Then, they specify the sample and reference data names with directory in the code of 2D WFT-IR_gpu.py, and run it.
